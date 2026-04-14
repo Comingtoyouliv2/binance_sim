@@ -1,0 +1,14 @@
+1. Types.h
+- 프로젝트 전체에서 쓰는 타입 이름을 정의 
+- 변수명: Price, Quantity, OrderId, OrderPointer, OrderPointers
+- int32_t, uint32_t, uint64_t 를 사용 
+- OrderPointers: vector -> FIFO 로 Price-time priority 관리하기 위함 
+
+
+2. OrderType.h
+
+
+3. LevelInfo.h
+
+
+4. Constants.h
