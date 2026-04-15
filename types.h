@@ -10,4 +10,4 @@ using Price = std::int32_t;
 using Quantity = std::uint32_t;
 using OrderId = std::uint32_t;
 using OrderPointer = std::shared_ptr<Order>;
-using OrderPointers = std::vector<OrderPointers>;
+using OrderPointers = std::vector<OrderPointer>;
