@@ -6,9 +6,12 @@
 
 
 2. OrderType.h
-
+-  enum 사용해서 OrderType/Side 정의
 
 3. LevelInfo.h
 
 
 4. Constants.h
+- InvalidPrice 를 numeric_limits<T>::min() 으로 설정
+- numeric_limits 사용 이유: 현재는 int32_t 를 Price 가 사용하지만, 차후에 int64_t 처럼 타입 변환이 이루어졌을때
+자동으로 min 값을 조정하기 위함 
