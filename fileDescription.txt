@@ -53,3 +53,6 @@ enum class MessageType {
     1) 연결 끊김 후 복구; 현재 오더북 상태를 한번에 전송 가능하다
     2) 새로 접속한 클라이언트 동기화; 지금 오더북 상태를 한 번에 받고 이후 이벤트만 추가 수신
     3) sequenceNumber 정의해서, 이벤트 누락 감지 (trade event)
+
+
+9. Orderbook.h
