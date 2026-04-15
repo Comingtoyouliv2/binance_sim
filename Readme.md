@@ -2,6 +2,7 @@
 
 C++20 으로 작성된 Limit Order Book 매칭 엔진 학습 노트입니다.
 원본 레포: [SLMolenaar/orderbook-simulator-cpp](https://github.com/SLMolenaar/orderbook-simulator-cpp)
+자세한 사항은 fileDescription.txt 를 확인하세요
 
 ---
 
