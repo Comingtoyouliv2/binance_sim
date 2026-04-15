@@ -1,3 +1,4 @@
+=========================================== Step 1 ===========================================
 1. Types.h
 - 프로젝트 전체에서 쓰는 타입 이름을 정의 
 - 변수명: Price, Quantity, OrderId, OrderPointer, OrderPointers
@@ -9,9 +10,19 @@
 -  enum 사용해서 OrderType/Side 정의
 
 3. LevelInfo.h
-
+- 호가창 snapshot 보여주는 파일
+- 1. bids_{bids} : bids_ 를받은 값 bids 로 바로 세팅하는 statement.
 
 4. Constants.h
 - InvalidPrice 를 numeric_limits<T>::min() 으로 설정
 - numeric_limits 사용 이유: 현재는 int32_t 를 Price 가 사용하지만, 차후에 int64_t 처럼 타입 변환이 이루어졌을때
 자동으로 min 값을 조정하기 위함 
+
+5. Trade.h
+- 어떤 bid/ask 가격을 넣었을때, 체결되고 나면 그 상태를 vector 로 저장하기 위함
+- orderId, price, quantity 를 vector 에 저장; bidTrade: {orderId, price, quantity}
+
+=========================================== Step 2 ===========================================
+
+6. Order.h
+- 
