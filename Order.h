@@ -32,6 +32,7 @@ class Order {
         Quantity GetFilledQuantity() const {return GetInitialQuantity() - GetRemainingQuantity();}
         bool IsFilled() const { return GetFilledQuantity() == 0;}
         
+        //  내 주문 전체 quantity - 체결된 quantity 를 계산해준다. 
         void Fill(Quantity quantity) {
             if (quantity > GetRemainingQuantity()) {
                 throw std::logic_error(std::format("Order ({}) cannot be filled for more than its remaining quantity.",
@@ -41,6 +42,8 @@ class Order {
             remainingQuantity_ -= quantity;
         }
 
+        // 시장가 주문이 완전히 체결 안 됐을 때, 남은 수량을 오더북에 올리기 위해 지정가 주문으로 바꾸는 함수 
+        // 장기대기 하는 일반적인 지정가 주문
         void ToGoodTillCancel(Price price) {
             if (orderType_ != OrderType::Market) {
                 throw std::logic_error("Cannot convert non-market order to GoodTillCancel");
@@ -49,8 +52,6 @@ class Order {
             price_ = price;
             orderType_ = OrderType::GoodTillCancel;
         }
-
-
 
     private:
         OrderType orderType_;

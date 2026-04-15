@@ -5,12 +5,16 @@
 - int32_t, uint32_t, uint64_t 를 사용 
 - OrderPointers: vector -> FIFO 로 Price-time priority 관리하기 위함 
 
-
 2. OrderType.h
 -  enum 사용해서 OrderType/Side 정의
+- GoodTillCancel   → 내가 취소할 때까지 오더북에 유지
+- ImmediateOrCancel→ 즉시 체결 안 되면 바로 취소
+- FillOrKill       → 전량 체결 안 되면 전부 취소
+- Market           → 가격 무관, 즉시 체결
+- GoodForDay       → 오늘 장 마감 시 자동 취소
 
 3. LevelInfo.h
-- 호가창 snapshot 보여주는 파일
+- 호가창 snapshot 보여주는 파일 (e.g. $70,000 | 2 BTC <- 이게 하나의 "Level")
 - 1. bids_{bids} : bids_ 를받은 값 bids 로 바로 세팅하는 statement.
 
 4. Constants.h
@@ -25,11 +29,27 @@
 =========================================== Step 2 ===========================================
 
 6. Order.h
-- 
+- 주문에 관해 Initialization 을 실행,
+    - 가격으로 기준으로 구매하거나, 코인 갯수를 기준으로 구매하거나
+- 내 주문의 체결이 되고 남은것을 관리
+
 
 7. OrderModify.h
 - 주문에 수정을 할때 사용
 - make_shared: 객체와 reference count(control block) 을 한 번에 할당하는 스마트 포인터
 
+8. MarketDataFeed.h 
+-  거래소에서 발생하는 모든 이벤트를 메시지 형태로 정의
 
-8. 
+enum class MessageType {
+    NewOrder,
+    CancelOrder,
+    ModifyOrder,
+    Trade,
+    BookSnapshot
+};
+
+- BookSnapshot 이 필요한 이유
+    1) 연결 끊김 후 복구; 현재 오더북 상태를 한번에 전송 가능하다
+    2) 새로 접속한 클라이언트 동기화; 지금 오더북 상태를 한 번에 받고 이후 이벤트만 추가 수신
+    3) sequenceNumber 정의해서, 이벤트 누락 감지 (trade event)
