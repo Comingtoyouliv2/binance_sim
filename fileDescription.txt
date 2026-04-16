@@ -26,7 +26,6 @@
 - 어떤 bid/ask 가격을 넣었을때, 체결되고 나면 그 상태를 vector 로 저장하기 위함
 - orderId, price, quantity 를 vector 에 저장; bidTrade: {orderId, price, quantity}
 
-=========================================== Step 2 ===========================================
 
 6. Order.h
 - 주문에 관해 Initialization 을 실행,
@@ -34,7 +33,7 @@
 - 내 주문의 체결이 되고 남은것을 관리
 
 
-7. OrderModify.h
+7. OrderMoㅊdify.h
 - 주문에 수정을 할때 사용
 - make_shared: 객체와 reference count(control block) 을 한 번에 할당하는 스마트 포인터
 
@@ -55,5 +54,15 @@ enum class MessageType {
     3) sequenceNumber 정의해서, 이벤트 누락 감지 (trade event)
 
 
-9. Orderbook.h
-- 4/16 checked
+9. exchangerules.h
+- 오류성을 띄는 가격을 거래소에 통과시키지 않게 하기 위함 
+struct{
+    Price tickSize = 1; // 가격의 최소 변동 단위, 42000.001234 처럼 무한 소수로 쪼개지지 않게 단위 통일
+    Quantity lotSize = 1; // 주문 수량의 최소 변동단위 => 이걸 차후에는 1 satoshi = 0.000001 BTC 이런 느낌으로
+                            // 나눠서 비트코인과 같은 high price stock/coin 도 거래 가능하게 만든다. 
+    Quantity minQuantity = 1; // 수량이 0.000001 처럼 너무 작은건 걸러버리는 목적, 최소 거래량
+    Quantity maxQuantity = 1000000; // 오류성 거래 보호 목적으로 최대 주문 수량을 제한 
+    Price minNotional = 0; // Price * Quantity 가 최소 얼마 이상이어야 하는지 알려준다.
+}
+
+=========================================== Step 2 ===========================================
