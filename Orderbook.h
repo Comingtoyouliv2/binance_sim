@@ -28,6 +28,9 @@ class Orderbook {
             std::size_t location_; 
         };
 
+        /** 
+         * @brief map<Key, Value, Comparator> 로 Price priority 를 구현
+        */
         std::map<Price, OrderPointers, std::greater<Price>> bids_;
         std::map<Price, OrderPointers, std::less<Price>> asks_;
         std::unordered_map<OrderId, OrderEntry> orders_;
@@ -43,17 +46,44 @@ class Orderbook {
         ExchangeRules exchangeRules_;
 
         /**
-         * @brief 매수 가격이 체결 가능하지 확인하는 함수
+         * @brief 주어진 가격과 방향(side)가 즉시 체결이 가능한지 확인한다
          * 
-         * @param 
-         * @return 
+         * 현재 오더북의 최우선 가격(best bid/ask)와 비교하여,
+         * 주문이 체결 가능한 상태인지 판단한다. 
+         * 
+         * @param price 주문 가격
+         * @param side 매수/매도 여부
+         * @return true 즉시 체결 가능
+         * @return false 체결 불가능
          */
         bool CanMatch(Price price, Side side) const {
             if(side == Side::Buy) {
-                
+                if(asks_.empty()) return false;
+                // 매도 호가창에서 가장 낮은 가격을 bestAsk 에 저장 
+                const auto &[bestAsk, _] = *asks_.begin();
+                return price >= bestAsk;
+            } else {
+                if (bids_.empty()) return false; 
+                const auto &[bestBid, _] = *bids_.begin();
+                return price <= bestBid;
             }
         }
-        OrderValidation ValidateOrder() {}
+
+
+        /**
+         * @brief 
+         * 
+         * @param 
+         * @param 
+         * @return 
+         */
+        OrderValidation ValidateOrder(OrderPointer order) const {
+            if (orders_.contains(order->GetOrderId())) {
+                return OrderValidation::Reject(RejectionReason::DuplicateOrderId);
+            }
+        }
+
+
         void CheckAndResetDay() {}
         void CancelGoodForDayOrder(){}
         std::vector<std::pair<OrderPointer, Quantity>> CollectMatchesForFillOrKill() {}
