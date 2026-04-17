@@ -81,6 +81,40 @@ class Orderbook {
             if (orders_.contains(order->GetOrderId())) {
                 return OrderValidation::Reject(RejectionReason::DuplicateOrderId);
             }
+
+            Price orderPrice = order->GetPrice();
+
+            /**
+             * AddOrder() 에 대한 exception 처리이다. 다시 확인할 필요가 있음 
+             */
+            bool isConvertedMarketOrder = 
+                (orderPrice == std::numeric_limits<Price>::max() ||
+                 orderPrice == std::numeric_limits<Price>::min());
+
+            // 불가능한 가격이라면, Reject 하는 경우들에 대한 처리 
+            if (!isConvertedMarketOrder) {
+                if (!exchangeRules_.IsValidPrice(orderPrice)) {
+                    return OrderValidation::Reject(RejectionReason::InvalidPrice);
+                }
+
+                if(!exchangeRules_.IsValidQuantity(order->GetRemainingQuantity())) {
+                    if (order->GetRemainingQuantity() < exchangeRules_.minQuantity) {
+                        return OrderValidation::Reject(RejectionReason::BelowMinQuantity);
+                    } else if (order->GetRemainingQuantity() > exchangeRules_.maxQuantity) {
+                        return OrderValidation::Reject(RejectionReason::AboveMaxQuantity);
+                    } else {
+                        return OrderValidation::Reject(RejectionReason::InvalidQuantity);
+                    }
+                }
+                
+                if (!isConvertedMarketOrder) {
+                    if (!exchangeRules_.IsValidNotional(orderPrice, order->GetRemainingQuantity())) {
+                        return OrderValidation::Reject(RejectionReason::BelowMinNotional);
+                    }
+                }
+
+                return OrderValidation::Accept();
+            }
         }
 
 
@@ -88,6 +122,7 @@ class Orderbook {
         void CancelGoodForDayOrder(){}
         std::vector<std::pair<OrderPointer, Quantity>> CollectMatchesForFillOrKill() {}
         Trades ExecuteMatchesForFillorKill() {}
+        Trades MatchFillOrKill(OrderPointer order) {}
         Trades MatchOrders() {}
         void ProcessNewOrder() {}
         void ProcessModify() {}
@@ -95,13 +130,60 @@ class Orderbook {
         void ProcessSnapshot() {}
 
     public:
-        Orderbook() {}
+        //객체 생성할때 lastDayReset_ 을 현재시간으로 초기화한다. 
+        Orderbook(): lastDayReset_(std::chrono::system_clock::now()) {}
 
         void SetExchangeRules() {}
         const ExchangeRules &GetExchangeRules() const {return exchangeRules_;}
 
         void SetDayResetTime() {}
-        Trades AddOrder() {}
+
+        /**
+         * @brief 주문 종류별로 주문을 처리하는 함수 
+         * 
+         * @param 
+         * @param 
+         * @return 
+         */
+        Trades AddOrder(OrderPointer order) {
+            if (order->GetOrderType() == OrderType::Market) {
+                if (order->GetSide() == Side::Buy && !asks_.empty()) {
+                    order->ToGoodTillCancel(std::numeric_limits<Price>::max());
+                } else if (order->GetSide() == Side::Sell && !bids_.empty()) {
+                    order->ToGoodTillCancel(std::numeric_limits<Price>::min());
+                } else {
+                    // 시장가 주문이지만, 반대편 호가창이 비어있는 경우, 주문을 거절한다. 
+                    throw std::logic_error("Market order cannot be added when the opposite side of the book is empty.");
+                }
+            }
+
+            auto validation = ValidateOrder(order);
+            if (!validation.isValid) return {};
+
+            if (order->GetOrderType() == OrderType::FillOrKill) {
+                return MatchFillOrKill(order);
+            }
+
+            OrderPointers* ordersPtr;
+
+            if (order->GetSide() == Side::Buy) {
+                ordersPtr = &bids_[order->GetPrice()];
+            } else {
+                ordersPtr = &asks_[order->GetPrice()];
+            }
+            
+            // 주문번호로 빠르게 찾기 위함, bids/asks 는 가격으로 저장해 특정 주문을 찾기 어렵다. 
+            ordersPtr->push_back(order);
+            orders_.insert({order->GetOrderId(), OrderEntry{order, ordersPtr->size() - 1}});
+
+            // IOC = Immediate or Cancel (가격 조건 지키면서, 지금 가능한만큼만 체결)
+            // Market Order 와는 다른점; 가격보다는 바로 살 수 있기를 원함
+            const bool isIoc = (order->GetOrderType() == OrderType::ImmediateOrCancel);
+            // std::optional<T> 는 값이 있을수도 있고, 없을 수도 있다고 알려준다. 
+            return MatchOrders(isIoc ? order->GetOrderId() : std::optional<OrderId>{});
+        }
+
+
         void CancelOrder() {}
         Trades MatchOrder() {}
 
