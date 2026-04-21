@@ -9,6 +9,7 @@
 #include <optional>
 #include <iostream>
 #include <sstream>
+#include <ctime>
 
 #include "Order.h"
 #include "OrderModify.h"
@@ -118,9 +119,76 @@ class Orderbook {
         }
 
 
-        void CheckAndResetDay() {}
-        void CancelGoodForDayOrder(){}
-        std::vector<std::pair<OrderPointer, Quantity>> CollectMatchesForFillOrKill() {}
+        void CheckAndResetDay() {
+            auto now = std::chrono::system_clock::now();
+            auto nowTime = std::chrono::system_clock::to_time_t(now);
+            auto lastResetTime = std::chrono::system_clock::to_time_t(lastDayReset_);
+
+            std::tm nowTm = *std::localtime(&nowTime);
+
+            std::tm todayResetTm = nowTm;
+            todayResetTm.tm_hour = dayResetHour_.count();
+            todayResetTm.tm_min = dayResetMinute_;
+            todayResetTm.tm_sec = 0;
+
+            auto todayResetTime = std::mktime(&todayResetTm);
+
+            if (lastResetTime < todayResetTime && nowTime >= todayResetTime) {
+                CancelGoodForDayOrders();
+                lastDayReset_ = now;
+            }
+        }
+
+        void CancelGoodForDayOrder(){
+            std::vector<OrderId> ordersToCancel;
+            for (const auto &[orderId, entry]: orders_) {
+                if (entry.order+->GetOrderType() == OrderType::GoodForDay) {
+                    ordersToCancel.push_back(orderId);
+                }
+            }
+            for (const auto &orderId: ordersToCancel) {
+                CancelOrder(orderId);
+            }
+        }
+
+        /**
+         * @brief 
+         * 
+         * @param 
+         * @param 
+         * @return 
+         */
+        std::vector<std::pair<OrderPointer, Quantity>> CollectMatchesForFillOrKill(
+            OrderPointer order,
+            Quantity &remainingQuantity
+        ) {
+
+            std::vector<std::pair<OrderPointer, Quantity>> matchingOrders;
+            
+            if(order->GetSide() == Side::Buy) {
+                for (auto &[askPrice, askOrders]: asks_) {
+                    Quantity matchQty = std::min(remainingQuantity, ask->GetRemainingQuantity());
+                    matchingOrders.push_back({ask, matchQty});
+                    remainingQuantity -= matchQty;
+                    if (remainingQuantity == 0) break;
+                }
+                if (remainingQuantity == 0) break;
+            } else {
+                for (auto &[bidPrice, bidOrders]: bids_) {
+                    if (bidPrice < order->GetPrice()) break;
+                    for (auto &bid: bidOrders) {
+                        Quantity matchQty = std::min(remainingQuantity, bid->GetRemainingQuantity());
+                        matchingOrders.push_back({bid, matchQty});
+                        remainingQuantity -= matchQty;
+                        if (remainingQuantity == 0) break;
+                    }
+                if (remainingQuantity == 0) break;
+                }
+            }
+
+            return matchingOrders;
+        }
+        
         Trades ExecuteMatchesForFillorKill() {}
         Trades MatchFillOrKill(OrderPointer order) {}
         Trades MatchOrders() {}
@@ -184,7 +252,38 @@ class Orderbook {
         }
 
 
-        void CancelOrder() {}
+        void CancelOrder(OrderId orderId) {
+            if (!orders_.contains(orderId)) return;
+
+            const auto &entry = orders_.at(orderId);
+            const Side side = entry.order_->GetSide();
+            const Price price = entry.order_->GetPrice();
+            const std::size_t idx = entry.location_;
+            orders_.erase(orderId);
+
+            auto &orders = (side == Side::Sell) ? asks_.at(price) : bids_.at(price);
+
+            
+            /**
+             * Vector 라서 swap-and-pop 이 가능하다
+             * Vector 의 중
+             * 
+             */
+            if (idx != orders.size() - 1) {
+                orders[idx] = std::move(orders.back());
+                orders_.at(orders[idx]->GetOrderId()).location_ = idx;
+            }
+
+            orders.pop_back();
+
+
+            if (side == Side::Sell) {
+                if (orders.empty()) asks_.erase(price);
+            } else {
+                if (orders.empty()) bids_.erase(price);
+            }            
+        }
+
         Trades MatchOrder() {}
 
         std::size_t Size() const {return orders_.size();}
